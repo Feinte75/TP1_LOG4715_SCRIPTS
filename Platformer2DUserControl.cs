@@ -71,10 +71,14 @@ public class Platformer2DUserControl : MonoBehaviour
 		#endif
 
 		// Pass all parameters to the character control script.
+
 		character.Move( h, crouch , jump);
 
-		if (jump && !character.jump) {
-			StartCoroutine (character.JumpRoutine ());
+		if (jump) {
+			//if walljump
+			character.wallJump();
+			if(!character.jump)
+				StartCoroutine (character.JumpRoutine ());
 		}
 		character.jump = jump;
 

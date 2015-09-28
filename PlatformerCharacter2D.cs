@@ -26,6 +26,13 @@ public class PlatformerCharacter2D : MonoBehaviour
 	int stackedJump = 0;
 	public bool jump = false;
 
+	/*	Ajout par les Étudiants pour les "Wall Jumps"	*/
+	Transform wallCheck;
+	float wallRadius = .1f;
+	bool wallBool = false;
+	float walljumpMultiplier;
+	public bool _hasWallJumped = false;
+
 	//Git Test
 
     void Awake()
@@ -33,6 +40,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 		// Setting up references.
 		groundCheck = transform.Find("GroundCheck");
 		ceilingCheck = transform.Find("CeilingCheck");
+		wallCheck = transform.Find ("WallCheck");		// Ajout pour le nouveau transform
 		anim = GetComponent<Animator>();
 	}
 	
@@ -41,6 +49,9 @@ public class PlatformerCharacter2D : MonoBehaviour
 		// The player is grounded if a circlecast to the groundcheck position hits anything designated as ground
 		grounded = Physics2D.OverlapCircle(groundCheck.position, groundedRadius, whatIsGround);
 		anim.SetBool("Ground", grounded);
+
+		// Détermine si il est possible de wall jump
+		wallBool = Physics2D.OverlapCircle(wallCheck.position, wallRadius, whatIsGround);
 
 		// Set the vertical animation
 		anim.SetFloat("vSpeed", rigidbody2D.velocity.y);
@@ -60,7 +71,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 			rigidbody2D.AddForce (new Vector2 (0f, 400f));
 
 			while (jump && (timer < jumpTime)) {
-				
+
 				//Add a constant force every frame of the jump
 				rigidbody2D.AddForce (new Vector2 (0, Time.deltaTime * jumpForce));
 				
@@ -142,15 +153,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 				Flip();
 
 		}
-
-        // If the player should jump...
-        /*if (grounded && jump) {
-            // Add a vertical force to the player.
-            anim.SetBool("Ground", false);
-            rigidbody2D.AddForce(new Vector2(0f, jumpForce * facteursaut));
-        }*/
 	}
-
 	
 	void Flip ()
 	{
@@ -163,8 +166,39 @@ public class PlatformerCharacter2D : MonoBehaviour
 		transform.localScale = theScale;
 	}
 
+	public void wallJump()
+	{
+		if (!grounded && jump && wallBool)
+		{
+			if(facingRight)
+				walljumpMultiplier = -1;
+			else
+				walljumpMultiplier = 1;
+			
+			//anim.SetBool("Ground", false);
+			
+			// Prepare une nouvelle velocité
+			rigidbody2D.velocity = new Vector2();
+			rigidbody2D.AddForce(new Vector2((walljumpMultiplier*jumpForce)/3, jumpForce/3));
+			
+			_hasWallJumped = true;
+			Flip ();
+			//return true;
+		}
+	}
+
 	public bool isGrounded()
 	{
 		return grounded;
+	}
+
+	public bool getWallJumped()
+	{
+		return _hasWallJumped;
+	}
+	
+	public void setWallJumped(bool hasWallJumped)
+	{
+		_hasWallJumped = hasWallJumped;
 	}
 }
