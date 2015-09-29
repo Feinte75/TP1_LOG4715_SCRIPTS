@@ -19,17 +19,19 @@ public class PlatformerCharacter2D : MonoBehaviour
 
 	Transform groundCheck;								// A position marking where to check if the player is grounded.
 	float groundedRadius = .2f;							// Radius of the overlap circle to determine if grounded
-	bool grounded = false;								// Whether or not the player is grounded.
+	[SerializeField]
+	public bool grounded = false;								// Whether or not the player is grounded.
 	Transform ceilingCheck;								// A position marking where to check for ceilings
 	float ceilingRadius = .01f;							// Radius of the overlap circle to determine if the player can stand up
 	Animator anim;										// Reference to the player's animator component.
 	int stackedJump = 0;
-	public bool jump = false;
+	public bool jumping = false;
+	public bool jumpPressed = false;
 
 	/*	Ajout par les Étudiants pour les "Wall Jumps"	*/
 	Transform wallCheck;
 	float wallRadius = .1f;
-	bool wallBool = false;
+	[SerializeField] bool wallBool = false;
 	float walljumpMultiplier;
 	public bool _hasWallJumped = false;
 
@@ -57,31 +59,60 @@ public class PlatformerCharacter2D : MonoBehaviour
 		anim.SetFloat("vSpeed", rigidbody2D.velocity.y);
 	}
 
-	public IEnumerator JumpRoutine()
+	public void jump(bool jumpPressed, bool jumpTrigger)
+	{
+		if (grounded) {
+			stackedJump = 0;
+		}
+
+		this.jumpPressed = jumpPressed;
+
+		if (wallBool && !grounded && jumpTrigger) {
+			wallJump ();
+		} else if (jumpPressed && (stackedJump < maxJump)) {
+			StartCoroutine (timedJump ());
+		}
+	}
+	
+	public void wallJump()
+	{
+		if(facingRight)
+			walljumpMultiplier = -1;
+		else
+			walljumpMultiplier = 1;
+		
+		//anim.SetBool("Ground", false);
+		
+		// Prepare une nouvelle velocité
+		rigidbody2D.velocity = Vector2.zero;
+		rigidbody2D.AddForce(new Vector2((walljumpMultiplier*jumpForce)/3, jumpForce/3));
+		
+		_hasWallJumped = true;
+		Flip ();
+
+		//return true;
+	}
+
+	public IEnumerator timedJump() 
 	{
 		float timer = 0;
-		 
-		if (grounded ) 
-			stackedJump = 0;
-
-		if (stackedJump < maxJump) {
-			jump = true;
-			rigidbody2D.velocity = Vector2.zero;
-			anim.SetBool ("Ground", false);
-			rigidbody2D.AddForce (new Vector2 (0f, 400f));
-
-			while (jump && (timer < jumpTime)) {
-
-				//Add a constant force every frame of the jump
-				rigidbody2D.AddForce (new Vector2 (0, Time.deltaTime * jumpForce));
-				
-				timer += Time.deltaTime;
-
-				yield return null;
-			}
-			Debug.Log ("Stop Jump" + "  timer = " + timer);
-			stackedJump ++;
+	
+		//rigidbody2D.velocity = Vector2.zero;
+		rigidbody2D.velocity = new Vector2(rigidbody2D.velocity.x, 0f);
+		anim.SetBool ("Ground", false);
+		rigidbody2D.AddForce (new Vector2 (0f, 400f));
+		
+		while (jumpPressed && (timer < jumpTime)) {
+			
+			//Add a constant force every frame of the jump
+			rigidbody2D.AddForce (new Vector2 (0, Time.deltaTime * jumpForce/400));
+			
+			timer += Time.deltaTime;
+			
+			yield return null;
 		}
+		//Debug.Log ("Stop Jump" + "  timer = " + timer);
+		stackedJump ++;
 	}
 
 	public IEnumerator JumpRoutine2()
@@ -89,13 +120,13 @@ public class PlatformerCharacter2D : MonoBehaviour
 		//Add force on the first frame of the jump
 		if (grounded) {
 
-			jump = true;
+			jumping = true;
 			anim.SetBool ("Ground", false);
-			rigidbody2D.velocity = Vector2.zero;
+			rigidbody2D.velocity.Set(rigidbody2D.velocity.x, 0f);
 			rigidbody2D.AddForce(new Vector2 (0f, 800f), ForceMode2D.Impulse);
 			
 			//Wait while the character's y-velocity is positive (the character is going up
-			while(jump && rigidbody2D.velocity.y > 0)	
+			while(jumping && rigidbody2D.velocity.y > 0)	
 			{	
 				yield return null;
 			}
@@ -110,9 +141,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 
 	}
 
-
-
-	public void Move(float move, bool crouch, bool jump)
+	public void Move(float move, bool crouch)
 	{
 
 		// If crouching, check to see if the character can stand up
@@ -135,13 +164,15 @@ public class PlatformerCharacter2D : MonoBehaviour
 			if(!grounded)
 			{
 				move = move * airControl;
+				rigidbody2D.AddForce(new Vector2 (move * maxSpeed, rigidbody2D.velocity.y));
+			}
+			else {
+				// Move the character
+				rigidbody2D.velocity = new Vector2(move * maxSpeed, rigidbody2D.velocity.y);	
 			}
 
 			// The Speed animator parameter is set to the absolute value of the horizontal input.
 			anim.SetFloat("Speed", Mathf.Abs(move));
-
-			// Move the character
-			rigidbody2D.velocity = new Vector2(move * maxSpeed, rigidbody2D.velocity.y);
 
 			// If the input is moving the player right and the player is facing left...
 			if(move > 0 && !facingRight)
@@ -151,7 +182,6 @@ public class PlatformerCharacter2D : MonoBehaviour
 			else if(move < 0 && facingRight)
 				// ... flip the player.
 				Flip();
-
 		}
 	}
 	
@@ -166,26 +196,6 @@ public class PlatformerCharacter2D : MonoBehaviour
 		transform.localScale = theScale;
 	}
 
-	public void wallJump()
-	{
-		if (!grounded && jump && wallBool)
-		{
-			if(facingRight)
-				walljumpMultiplier = -1;
-			else
-				walljumpMultiplier = 1;
-			
-			//anim.SetBool("Ground", false);
-			
-			// Prepare une nouvelle velocité
-			rigidbody2D.velocity = new Vector2();
-			rigidbody2D.AddForce(new Vector2((walljumpMultiplier*jumpForce)/3, jumpForce/3));
-			
-			_hasWallJumped = true;
-			Flip ();
-			//return true;
-		}
-	}
 
 	public bool isGrounded()
 	{
