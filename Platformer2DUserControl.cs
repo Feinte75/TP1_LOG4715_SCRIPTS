@@ -7,7 +7,7 @@ public class Platformer2DUserControl : MonoBehaviour
     private bool jump;
 	private float facteursaut = 0f;
 	private float timer = 1f;
-
+	private float hauteurmax;
 
 	void Awake()
 	{
@@ -16,6 +16,14 @@ public class Platformer2DUserControl : MonoBehaviour
 
 	void Update()
 	{
+		if (character.isGrounded())
+		{
+			hauteurmax = (transform.position.y+0.8f + (character.getJumpTime())*(character.getJumpForce()/400));
+		}
+		if (character.getDrawLine())
+		{
+			Debug.DrawLine(new Vector2(-20, hauteurmax), new Vector2(30, hauteurmax), Color.red);
+		}
 		//Debug.Log("I am not crazy");
 		/*if (Input.GetButtonUp("Jump")) {
 			jump = true;
@@ -81,6 +89,7 @@ public class Platformer2DUserControl : MonoBehaviour
 				StartCoroutine (character.JumpRoutine ());
 		}
 		character.jump = jump;
+		character.Jetpack ();
 
 	}
 }

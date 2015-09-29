@@ -16,6 +16,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 	[SerializeField] float jumpTime = 1f;				// Control jump time
 	[SerializeField] float jumpForce = 1000f;			// Amount of force added when the player jumps.	
 	[SerializeField] int maxJump = 2;
+	[SerializeField] bool drawLine = true;
 
 	Transform groundCheck;								// A position marking where to check if the player is grounded.
 	float groundedRadius = .2f;							// Radius of the overlap circle to determine if grounded
@@ -187,9 +188,35 @@ public class PlatformerCharacter2D : MonoBehaviour
 		}
 	}
 
+	public void Jetpack(){
+		//Si les sauts sont epuisé alors
+		if (stackedJump >= maxJump && jump)
+		{
+			//Add a constant force every frame of the jump
+			rigidbody2D.AddForce (new Vector2 (0,40f));
+			
+		}
+		
+	}
+
 	public bool isGrounded()
 	{
 		return grounded;
+	}
+	
+	public float getJumpTime()
+	{
+		return jumpTime;
+	}
+	
+	public float getJumpForce()
+	{
+		return jumpForce;
+	}
+	
+	public bool getDrawLine()
+	{
+		return drawLine;
 	}
 
 	public bool getWallJumped()
