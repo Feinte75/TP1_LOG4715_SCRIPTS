@@ -54,7 +54,7 @@ public class CameraFollow : MonoBehaviour
 			targetX = Mathf.Lerp(transform.position.x, player.position.x, xSmooth * Time.deltaTime);
 
 		// If the player has moved beyond the y margin...
-		if(CheckYMargin() && character.isGrounded())
+		if(CheckYMargin() && (character.isGrounded() || character.inJetpack()))
 			// ... the target y coordinate should be a Lerp between the camera's current y position and the player's current y position.
 			targetY = Mathf.Lerp(transform.position.y, player.position.y, ySmooth * Time.deltaTime);
 

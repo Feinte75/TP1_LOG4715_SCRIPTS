@@ -28,18 +28,14 @@ public class Platformer2DUserControl : MonoBehaviour
 		// Read the jump input in Update so button presses aren't missed.
 		#if CROSS_PLATFORM_INPUT
 
-		if(jumpTrigger == false) {
-			if (CrossPlatformInput.GetButtonDown("Jump")){
-				jumpTrigger = true;
-				Debug.Log("OK");
-			}
-		}
-		else {
-			jumpTrigger = false;
+
+		if (CrossPlatformInput.GetButtonDown("Jump")){
+			jumpTrigger = true;
+			Debug.Log ("jumpTrigger : "+ jumpTrigger);
 		}
 
 		jumpPressed = CrossPlatformInput.GetButton("Jump");
-		Debug.Log ("jumpPressed = " + jumpPressed);
+		//Debug.Log ("jumpPressed = " + jumpPressed);
 		#else
 
 		if (Input.GetButtonDown("Jump")) jump = true;
@@ -61,6 +57,7 @@ public class Platformer2DUserControl : MonoBehaviour
 
 		character.Move( h, crouch);
 		character.jump(jumpPressed, jumpTrigger);
+		jumpTrigger = false;
 
 	}
 }
