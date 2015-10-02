@@ -4,11 +4,8 @@
 public class Platformer2DUserControl : MonoBehaviour 
 {
 	private PlatformerCharacter2D character;
-    private bool jumpPressed = false;
-	private bool jumpTrigger = false;
-	private float facteursaut = 0f;
-	private float timer = 1f;
-
+    private bool jumpPressed = false;		// Jump key pressed
+	private bool jumpTrigger = false;		// True on first frame jump key pressed
 
 	void Awake()
 	{
@@ -17,29 +14,19 @@ public class Platformer2DUserControl : MonoBehaviour
 
 	void Update()
 	{
-		//Debug.Log("I am not crazy");
-		/*if (Input.GetButtonUp("Jump")) {
-			jump = true;
-		}
-
-		if (Input.GetButtonDown ("Jump")) {
-			jump = false;
-		}*/
 		// Read the jump input in Update so button presses aren't missed.
 		#if CROSS_PLATFORM_INPUT
 
-
+		// Get jump trigger (First frame with jump key down)
 		if (CrossPlatformInput.GetButtonDown("Jump")){
 			jumpTrigger = true;
 			Debug.Log ("jumpTrigger : "+ jumpTrigger);
 		}
 
+		// Get whether jump key is pressed or not
 		jumpPressed = CrossPlatformInput.GetButton("Jump");
-		//Debug.Log ("jumpPressed = " + jumpPressed);
 		#else
 
-		if (Input.GetButtonDown("Jump")) jump = true;
-		if (Input.GetButtonUp("Jump")) jump = false;
 		#endif
 	}
 
@@ -54,9 +41,10 @@ public class Platformer2DUserControl : MonoBehaviour
 		#endif
 
 		// Pass all parameters to the character control script.
-
 		character.Move( h, crouch);
-		character.jump(jumpPressed, jumpTrigger);
+		character.Jump(jumpPressed, jumpTrigger);
+
+		// Reset jumpTrigger once processed
 		jumpTrigger = false;
 
 	}

@@ -6,6 +6,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 	bool facingRight = true;							// For determining which way the player is currently facing.
 
 	[SerializeField] float maxSpeed = 10f;				// The fastest the player can travel in the x axis.
+	[SerializeField] float maxAirSpeed = 10f;
 
 	[Range(0, 1)]
 	[SerializeField] float crouchSpeed = .36f;			// Amount of maxSpeed applied to crouching movement. 1 = 100%
@@ -13,14 +14,15 @@ public class PlatformerCharacter2D : MonoBehaviour
 	[Range(0, 1)]
 	[SerializeField] float airControl = .5f;			// Whether or not a player can steer while jumping;
 	[SerializeField] LayerMask whatIsGround;			// A mask determining what is ground to the character
-	[SerializeField] float maxJumpDuration = 0.5f;				// Control jump time
-	[SerializeField] float jumpForce = 1000f;			// Amount of force added when the player jumps.	
+	[SerializeField] float maxJumpDuration = 0.5f;		// Control jump time
+	[SerializeField] float startingJumpForce = 20f;		// Force applied on first jump frame
+	[SerializeField] float jumpForce = 1000f;			// Amount of force added over maxJumpDuration when the player maintain jump key pressed	
 	[SerializeField] int maxStackedJump = 2;
-	[SerializeField] bool drawLine = true;				// Debugging information on jump height
+	[SerializeField] bool drawJumpDebugLine = true;		// Debugging information on jump height
 
 	Transform groundCheck;								// A position marking where to check if the player is grounded.
 	float groundedRadius = .2f;							// Radius of the overlap circle to determine if grounded
-	[SerializeField] bool grounded = false;								// Whether or not the player is grounded.
+	bool grounded = false;								// Whether or not the player is grounded.
 	Transform ceilingCheck;								// A position marking where to check for ceilings
 	float ceilingRadius = .01f;							// Radius of the overlap circle to determine if the player can stand up
 	Animator anim;										// Reference to the player's animator component.
@@ -31,13 +33,20 @@ public class PlatformerCharacter2D : MonoBehaviour
 	Transform wallCheck;
 	float wallRadius = .1f;
 	bool wallBool = false;
-	float walljumpMultiplier;
+	float wallJumpMultiplier;
+	[Tooltip("Horizontal Impulse force when wall Jumping")]
+	[SerializeField] float wallRepulsionForce = 10f;
+	[Tooltip("Vertical Impulse force when wall Jumping")]
+	[SerializeField] float wallJumpForce = 10f;
 	
 	bool jumpPressed;
 	IEnumerator jumpRoutine = null;
 
 	// Jetpack
+	[Tooltip("Jetpack Duration in second")]
 	[SerializeField] float jetpackDuration = 10f;
+	[Tooltip("Jetpack Force applied over one second")]
+	[SerializeField] float jetpackForce = 2400f;
 	bool jetpack = false;
 
     void Awake()
@@ -52,14 +61,17 @@ public class PlatformerCharacter2D : MonoBehaviour
 	float hauteurMax = 0;
 
 	void Update() {
-		if (drawLine)
+		// Debug info, Draw line at max jump height
+		if (drawJumpDebugLine)
 		{
+			// Only compute max height when player is grounded
 			if (grounded)
-				hauteurMax = (transform.position.y+0.8f + (maxJumpDuration)*(jumpForce/400));
+				hauteurMax = (transform.position.y + 0.8f + (maxJumpDuration) * (jumpForce/400));
 
-			Debug.DrawLine(new Vector2(-20, hauteurMax), new Vector2(30, hauteurMax), Color.red);
+			Debug.DrawLine(new Vector2(groundCheck.position.x - 2, hauteurMax), new Vector2(groundCheck.position.x + 2, hauteurMax), Color.red);
 		}
 	}
+
 	void FixedUpdate()
 	{
 		// The player is grounded if a circlecast to the groundcheck position hits anything designated as ground
@@ -79,7 +91,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 	 * 	Takes care of running the good jump or jetpack
 	 * 	according to different parameters
 	 */ 
-	public void jump(bool jumpPressed, bool jumpTrigger)
+	public void Jump(bool jumpPressed, bool jumpTrigger)
 	{
 		this.jumpPressed = jumpPressed;	// Needed for internal jump management
 
@@ -105,7 +117,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 			jumpRoutine = TimedJump ();
 			StartCoroutine (jumpRoutine);
 		} 
-		// Jetpack
+		// Jetpack when no more stackedJump available
 		else if ((stackedJump >= maxStackedJump)) {
 			// Boolean used to start only one jetpack coroutine
 			if (!jetpack)
@@ -118,18 +130,19 @@ public class PlatformerCharacter2D : MonoBehaviour
 
 	/**
 	 *	WallJump 
+	 *	Immediate repulsion in opposite direction
 	 */ 
 	public void WallJump()
 	{
 		// Determine opposite direction
 		if(facingRight)
-			walljumpMultiplier = -1;
+			wallJumpMultiplier = -1;
 		else
-			walljumpMultiplier = 1;
+			wallJumpMultiplier = 1;
 
 		// Apply a new force in opposite direction
 		rigidbody2D.velocity = Vector2.zero;
-		rigidbody2D.AddForce(new Vector2((walljumpMultiplier*jumpForce)/3, jumpForce/2));
+		rigidbody2D.AddForce(new Vector2(wallJumpMultiplier * wallRepulsionForce, wallJumpForce), ForceMode2D.Impulse);
 
 		// Flip the character to align with new direction
 		Flip ();
@@ -149,13 +162,13 @@ public class PlatformerCharacter2D : MonoBehaviour
 		//rigidbody2D.velocity = Vector2.zero;
 		rigidbody2D.velocity = new Vector2(rigidbody2D.velocity.x, 0f);
 		anim.SetBool ("Ground", false);
-		rigidbody2D.AddForce (new Vector2 (0f, jumpForce / 2));
+		rigidbody2D.AddForce (new Vector2 (0f, startingJumpForce), ForceMode2D.Impulse);
 		Debug.Log ("Launching coroutine");
 
 		while (jumpPressed && (timer < maxJumpDuration)) {
 
 			//Add a constant force every frame of the jump
-			rigidbody2D.AddForce (new Vector2 (0, Time.deltaTime * jumpForce * maxJumpDuration / 2));
+			rigidbody2D.AddForce (new Vector2 (0, Time.deltaTime * jumpForce / 2));
 			
 			timer += Time.deltaTime;
 			
@@ -178,7 +191,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 		jetpack = true;
 		Debug.Log ("Enter Jetpack");
 
-		rigidbody2D.velocity = new Vector2(rigidbody2D.velocity.x, 0f);
+		//rigidbody2D.velocity = new Vector2(rigidbody2D.velocity.x, 0f);
 
 		while ((timer < jetpackDuration) && !grounded) {
 
@@ -186,7 +199,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 
 			if(jumpPressed)
 			{
-				rigidbody2D.AddForce (new Vector2 (0, Time.deltaTime * jumpForce * 2.2f));
+				rigidbody2D.AddForce (new Vector2 (0, Time.deltaTime * jetpackForce));
 				timer += Time.deltaTime;
 			}
 
@@ -208,7 +221,7 @@ public class PlatformerCharacter2D : MonoBehaviour
 		//Add force on the first frame of the jump
 		anim.SetBool ("Ground", false);
 		rigidbody2D.velocity = new Vector2(rigidbody2D.velocity.x, 0f);
-		rigidbody2D.AddForce(new Vector2 (0f, 15f), ForceMode2D.Impulse);
+		rigidbody2D.AddForce(new Vector2 (0f, startingJumpForce), ForceMode2D.Impulse);
 		
 		//Wait while the character's y-velocity is positive (the character is going up
 		while(jumpPressed && rigidbody2D.velocity.y > 0)	
@@ -225,9 +238,31 @@ public class PlatformerCharacter2D : MonoBehaviour
 		stackedJump ++;
 	}
 
+	IEnumerator JumpJustRight()
+	{
+		rigidbody2D.velocity = Vector2.zero;
+		float timer = 0f;
+		anim.SetBool ("Ground", false);
+
+		rigidbody2D.AddForce(new Vector2(0f, startingJumpForce), ForceMode2D.Impulse);
+
+		while(jumpPressed && timer < maxJumpDuration)
+		{
+			//Calculate how far through the jump we are as a percentage
+			//apply the full jump force on the first frame, then apply less force
+			//each consecutive frame
+			
+			float proportionCompleted = timer / maxJumpDuration;
+			Vector2 thisFrameJumpVector = Vector2.Lerp(new Vector2(0, jumpForce), Vector2.zero, proportionCompleted);
+			rigidbody2D.AddForce(thisFrameJumpVector);
+			timer += Time.deltaTime;
+			yield return null;
+		}
+		stackedJump ++;
+	}
+
 	public void Move(float move, bool crouch)
 	{
-
 		// If crouching, check to see if the character can stand up
 		if(!crouch && anim.GetBool("Crouch"))
 		{
@@ -254,6 +289,9 @@ public class PlatformerCharacter2D : MonoBehaviour
 				// Move the character
 				rigidbody2D.velocity = new Vector2(move * maxSpeed, rigidbody2D.velocity.y);	
 			}
+
+			if(rigidbody2D.velocity.x > maxAirSpeed)
+				rigidbody2D.velocity = new Vector2(maxAirSpeed, rigidbody2D.velocity.y);
 
 			// The Speed animator parameter is set to the absolute value of the horizontal input.
 			anim.SetFloat("Speed", Mathf.Abs(move));
@@ -294,10 +332,5 @@ public class PlatformerCharacter2D : MonoBehaviour
 	public bool isGrounded() 
 	{
 		return grounded;
-	}
-	
-	public bool getDrawLine()
-	{
-		return drawLine;
 	}
 }
